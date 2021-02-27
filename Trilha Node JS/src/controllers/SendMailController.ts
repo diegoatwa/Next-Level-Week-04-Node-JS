@@ -20,7 +20,7 @@ class SendMailController {
         error: "User does not exists!"
       })
     }
-
+    console.log(`\n\n\n\n\n ${survey_id}\n\n\n\n\n\n`)
     const surveyAlreadyExists = await surveysRepository.findOne({ id: survey_id })
 
     if (!surveyAlreadyExists) {
@@ -33,7 +33,7 @@ class SendMailController {
       user_id: userAlreadyExists.id,
       survey_id
     })
-    await surveysRepository.save(surveyUser)
+    await surveysUserRepository.save(surveyUser)
     return res.json(surveyUser)
   }
 }
