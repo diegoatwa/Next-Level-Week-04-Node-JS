@@ -4,7 +4,8 @@ import { getCustomRepository } from "typeorm"
 import { SurveysRepository } from "../repositories/SurveysRepository"
 import { SurveysUsersRepository } from "../repositories/SurveysUsersRepository"
 import { UsersRepository } from "../repositories/UsersRepository"
-import SendMailService from '../services/SendMailService';
+import SendMailService from '../services/SendMailService'
+import { AppError } from "../errors/AppError"
 
 
 class SendMailController {
@@ -18,23 +19,19 @@ class SendMailController {
     const user = await usersRepository.findOne({ email })
 
     if (!user) {
-      return res.status(400).json({
-        error: "User does not exists!"
-      })
+      throw new AppError("User does not exists!")
     }
     console.log(`\n\n\n\n\n ${survey_id}\n\n\n\n\n\n`)
     const survey = await surveysRepository.findOne({ id: survey_id })
 
     if (!survey) {
-      return res.status(400).json({
-        error: "Survey does not exists!"
-      })
+      throw new AppError("Survey does not exists!")
     }
 
     const npsPath = resolve(__dirname, "../", "views", "emails", "npsMail.hbs")
 
     const surveyUserAlreadyExists = await surveysUserRepository.findOne({
-      where: [{ user_id: user.id }, { value: null }],
+      where: { user_id: user.id, value: null },
       relations: ["user", "survey"]
     })
 
@@ -42,21 +39,22 @@ class SendMailController {
       name: user.name,
       title: survey.title,
       description: survey.description,
-      user_id: user.id,
+      id: user.id,
       link: process.env.URL_MAIL
     }
 
     if (surveyUserAlreadyExists) {
+      variables.id = surveyUserAlreadyExists.id
       await SendMailService.execute(email, survey.title, variables, npsPath)
       return res.json(surveyUserAlreadyExists)
     }
 
     const surveyUser = surveysUserRepository.create({
       user_id: user.id,
-      survey_id
+      survey_id: ""
     })
     await surveysUserRepository.save(surveyUser)
-
+    variables.id = surveyUser.id
     await SendMailService.execute(email, survey.title, variables, npsPath)
 
     return res.json(surveyUser)
